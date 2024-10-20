@@ -1,0 +1,7 @@
+apache-airflow
+requests
+azure-cli
+apache-airflow[celery]
+pyspark
+python-dotenv
+azure-storage-file-datalake

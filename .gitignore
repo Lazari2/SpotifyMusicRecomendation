@@ -1,0 +1,124 @@
+# Geral
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+*.log
+*.swp
+.DS_Store
+.env
+*.env
+**/.env
+*.bak
+*.tmp
+
+# Diretórios e arquivos gerados pelo sistema operacional
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.bak
+
+# Diretórios e arquivos de IDEs e editores de código
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.project
+*.pydevproject
+*.iml
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.pyo
+*.pytest_cache/
+.tox/
+coverage/
+.coverage
+.cache
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.coverage.*
+.cache/
+.pytest_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Airflow
+airflow.cfg
+unittests.cfg
+webserver_config.py
+logs/
+dags/__pycache__/
+plugins/__pycache__/
+
+# Spark
+metastore_db/
+derby.log
+*.crc
+
+# Docker
+**/logs
+*.log
+*.pid
+*.tar
+*.sock
+docker-compose.override.yml
+docker-compose.override.yaml
+docker-compose.dev.yml
+docker-compose.dev.yaml
+docker-compose.prod.yml
+docker-compose.prod.yaml
+.env
+.dockerignore
+
+# Data files
+*.parquet
+*.json
+*.xml
+*.xlsx
+*.h5
+*.zip
+
+# Azure
+azure-pipelines.yml
+*.azure-pipelines.yml
+*secrets.json
+
+# IDEs
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build files
+build/
+dist/
+*.egg-info/
+*.manifest
+*.spec
+
+# Configurações locais
+*.local
+
+# Arquivos temporários
+tmp/
+temp/
