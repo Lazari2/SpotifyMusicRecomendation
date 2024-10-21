@@ -14,17 +14,7 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-    RIOT_API_KEY: ${RIOT_API_KEY}
-    ADLS_ACCOUNT_NAME: ${ADLS_ACCOUNT_NAME}
-    ADLS_ACCOUNT_KEY: ${ADLS_ACCOUNT_KEY}
-    DATA_LAKE_FILE_SYSTEM: ${DATA_LAKE_FILE_SYSTEM}
-    DATA_LAKE_OUTPUT_PATH: ${DATA_LAKE_OUTPUT_PATH}
-    SERVER_REGION: ${SERVER_REGION}
-    DATA_PLAYERS_NICK: ${DATA_PLAYERS_NICK}
-    DATA_PLAYERS_TAG: ${DATA_PLAYERS_TAG}
-    DATA_PLAYERS_TEAM: ${DATA_PLAYERS_TEAM}
     
-   
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
   
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
@@ -51,6 +41,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
+      - ./python_scripts:/opt/airflow/python_scripts
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
@@ -88,6 +79,10 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    volumes:
+    - ./dags:/opt/airflow/dags
+    - ./python_scripts:/opt/airflow/python_scripts
+    
 
   airflow-scheduler:
     <<: *airflow-common
@@ -103,6 +98,10 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    volumes:
+    - ./dags:/opt/airflow/dags
+    - ./python_scripts:/opt/airflow/python_scripts
+    
 
   airflow-worker:
     <<: *airflow-common
