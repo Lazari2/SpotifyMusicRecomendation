@@ -3,59 +3,47 @@ import os
 from dotenv import load_dotenv
 import json
 from azure.storage.filedatalake import DataLakeServiceClient
+import random
 
 load_dotenv()
 
-SPOTIFY_API_KEY= os.getenv("SPOTIFY_API_KEY")    
-ADLS_ACCOUNT_NAME= os.getenv("ADLS_ACCOUNT_NAME") 
-ADLS_ACCOUNT_KEY= os.getenv("ADLS_ACCOUNT_KEY") 
-DATA_LAKE_FILE_SYSTEM= os.getenv("DATA_LAKE_FILE_SYSTEM") 
-DATA_LAKE_OUTPUT_PATH_TRACK_IDS = os.getenv("DATA_LAKE_OUTPUT_PATH_TRACK_IDS") 
+SPOTIFY_API_KEY = os.getenv("SPOTIFY_API_KEY")  
+ADLS_ACCOUNT_NAME = os.getenv("ADLS_ACCOUNT_NAME") 
+ADLS_ACCOUNT_KEY = os.getenv("ADLS_ACCOUNT_KEY") 
+DATA_LAKE_FILE_SYSTEM = os.getenv("DATA_LAKE_FILE_SYSTEM") 
+DATA_LAKE_OUTPUT_PATH_TRACK_IDS = os.getenv("DATA_LAKE_OUTPUT_PATH_TRACK_IDS")
 
-def get_new_release_ids():
-    url = "https://api.spotify.com/v1/browse/new-releases"
+def search_tracks(query, limit=50, offset=0):
+    url = "https://api.spotify.com/v1/search"
     headers = {
         "Authorization": f"Bearer {SPOTIFY_API_KEY}"
     }
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        data = response.json()
-        album_ids = [album['id'] for album in data['albums']['items']]
-        return album_ids
-    else:
-        print(f"Erro ao buscar novos lançamentos. Status Code: {response.status_code}")
-        return None
-
-def get_tracks_from_album(album_id):
-    url = f"https://api.spotify.com/v1/albums/{album_id}"
-    headers = {
-        "Authorization": f"Bearer {SPOTIFY_API_KEY}"
+    params = {
+        "q": query,
+        "type": "track",
+        "limit": limit,
+        "offset": offset  
     }
-    response = requests.get(url, headers=headers)
+
+    response = requests.get(url, headers=headers, params=params)
 
     if response.status_code == 200:
         data = response.json()
-        track_ids = [track['id'] for track in data['tracks']['items']]
-        return track_ids
+
+        track_info = [
+            {
+                'track_id': track['id'],
+                'track_name': track['name'],
+                'artist_name': track['artists'][0]['name']
+            }
+            for track in data['tracks']['items']
+        ]
+        return track_info
     else:
-        print(f"Erro ao buscar faixas do álbum {album_id}. Status Code: {response.status_code}")
+        print(f"Erro ao buscar faixas com o termo '{query}'. Status Code: {response.status_code}")
         return None
 
-def get_new_release_track_ids():
-    album_ids = get_new_release_ids()
-    if not album_ids:
-        return []
-
-    all_track_ids = []
-    for album_id in album_ids:
-        track_ids = get_tracks_from_album(album_id)
-        if track_ids:
-            all_track_ids.extend(track_ids)
-    
-    return all_track_ids
-
-def read_existing_track_ids():
+def read_existing_track_info():
     try:
         service_client = DataLakeServiceClient(
             account_url=f"https://{ADLS_ACCOUNT_NAME}.dfs.core.windows.net",
@@ -71,13 +59,13 @@ def read_existing_track_ids():
             return []
 
         download = file_client.download_file()
-        track_ids_str = download.readall().decode('utf-8')
+        track_info_str = download.readall().decode('utf-8')
 
-        existing_track_ids = json.loads(track_ids_str)
-        return existing_track_ids
+        existing_track_info = json.loads(track_info_str)
+        return existing_track_info
 
     except Exception as e:
-        print(f"Erro ao ler track_ids do ADLS: {str(e)}")
+        print(f"Erro ao ler dados das faixas do ADLS: {str(e)}")
         return []
 
 def upload_to_adls(file_content, file_name):
@@ -97,23 +85,50 @@ def upload_to_adls(file_content, file_name):
     except Exception as e:
         print(f"Erro ao enviar dados para o ADLS: {str(e)}")
 
-def store_track_ids(track_ids):
+def store_track_info(track_info):
+    existing_track_info = read_existing_track_info()
 
-    existing_track_ids = read_existing_track_ids()
+    existing_track_info.extend(track_info)
 
-    existing_track_ids.extend(track_ids)
+    unique_track_info = {track['track_id']: track for track in existing_track_info}.values()
 
-    # Remove duplicados 
-    unique_track_ids = list(dict.fromkeys(existing_track_ids))
+    track_info_json = json.dumps(list(unique_track_info), indent=2)
 
-    track_ids_json = json.dumps(unique_track_ids, indent=2)
+    upload_to_adls(track_info_json, DATA_LAKE_OUTPUT_PATH_TRACK_IDS)
 
-    upload_to_adls(track_ids_json, DATA_LAKE_OUTPUT_PATH_TRACK_IDS)
+def get_random_search_query():
+    queries = ["rock", "pop", "jazz", "hip hop", "classical", "blues", "edm", "metal", "indie", "funk", "disco"]
+
+#Generos extraidos do endpoint de genres da api do spotify, mas muitos nao funcionam, testar os que funcionam dpois....
+
+    # "genres": ["acoustic", "afrobeat", "alt-rock", "alternative", "ambient", "anime", "black-metal", "bluegrass", 
+    #            "blues", "bossanova", "brazil", "breakbeat", "british", "cantopop", "chicago-house", "children", 
+    #            "chill", "classical", "club", "comedy", "country", "dance", "dancehall", "death-metal", "deep-house", 
+    #            "detroit-techno", "disco", "disney", "drum-and-bass", "dub", "dubstep", "edm", "electro", "electronic", 
+    #            "emo", "folk", "forro", "french", "funk", "garage", "german", "gospel", "goth", "grindcore", "groove", 
+    #            "grunge", "guitar", "happy", "hard-rock", "hardcore", "hardstyle", "heavy-metal", "hip-hop", "holidays", 
+    #            "honky-tonk", "house", "idm", "indian", "indie", "indie-pop", "industrial", "iranian", "j-dance", "j-idol", 
+    #            "j-pop", "j-rock", "jazz", "k-pop", "kids", "latin", "latino", "malay", "mandopop", "metal", "metal-misc", 
+    #            "metalcore", "minimal-techno", "movies", "mpb", "new-age", "new-release", "opera", "pagode", "party", 
+    #            "philippines-opm", "piano", "pop", "pop-film", "post-dubstep", "power-pop", "progressive-house", "psych-rock", 
+    #            "punk", "punk-rock", "r-n-b", "rainy-day", "reggae", "reggaeton", "road-trip", "rock", "rock-n-roll", 
+    #            "rockabilly", "romance", "sad", "salsa", "samba", "sertanejo", "show-tunes", "singer-songwriter", "ska", 
+    #            "sleep", "songwriter", "soul", "soundtracks", "spanish", "study", "summer", "swedish", "synth-pop", "tango", 
+    #            "techno", "trance", "trip-hop", "turkish", "work-out", "world-music"]
+    
+    return random.choice(queries)
 
 if __name__ == "__main__":
-    track_ids = get_new_release_track_ids()
-    if track_ids:
-        store_track_ids(track_ids)
-    else:
-        print("Nenhum novo ID encontrado.")
 
+    search_query = get_random_search_query()
+    
+    offset = random.randint(0, 10000)
+
+    track_info = search_tracks(search_query, limit=50, offset=offset)
+
+    if track_info:
+        store_track_info(track_info)
+
+        print(json.dumps(track_info, indent=2))
+    else:
+        print("Nenhuma faixa encontrada para o termo de busca.")

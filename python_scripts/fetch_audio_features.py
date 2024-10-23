@@ -3,7 +3,7 @@ import pandas as pd
 from azure.storage.filedatalake import DataLakeServiceClient
 from dotenv import load_dotenv
 import requests
-from dataset_extraction import read_existing_track_ids
+import json
 
 load_dotenv()
 
@@ -11,8 +11,8 @@ SPOTIFY_API_KEY = os.getenv("SPOTIFY_API_KEY")
 ADLS_ACCOUNT_NAME = os.getenv("ADLS_ACCOUNT_NAME")
 ADLS_ACCOUNT_KEY = os.getenv("ADLS_ACCOUNT_KEY")
 DATA_LAKE_FILE_SYSTEM = os.getenv("DATA_LAKE_FILE_SYSTEM")
-DATA_LAKE_OUTPUT_PATH = os.getenv("DATA_LAKE_OUTPUT_PATH")
-
+DATA_LAKE_OUTPUT_PATH_TRACK_IDS = os.getenv("DATA_LAKE_OUTPUT_PATH_TRACK_IDS") 
+DATA_LAKE_OUTPUT_PATH= os.getenv("DATA_LAKE_OUTPUT_PATH")
 
 def get_audio_features(track_id):
     url = f"https://api.spotify.com/v1/audio-features/{track_id}"
@@ -25,7 +25,6 @@ def get_audio_features(track_id):
     else:
         print(f"Erro ao buscar audio-features para {track_id}. Status Code: {response.status_code}")
         return None
-
 
 def read_existing_parquet():
     try:
@@ -49,7 +48,6 @@ def read_existing_parquet():
         print(f"Nenhum arquivo Parquet existente encontrado. Criando novo arquivo.")
         return pd.DataFrame()
 
-
 def upload_to_adls(file_content, file_name):
     try:
         service_client = DataLakeServiceClient(
@@ -58,7 +56,6 @@ def upload_to_adls(file_content, file_name):
         )
 
         file_system_client = service_client.get_file_system_client(file_system=DATA_LAKE_FILE_SYSTEM)
-
         file_client = file_system_client.get_file_client(file_name)
 
         file_client.upload_data(file_content, overwrite=True)
@@ -67,14 +64,38 @@ def upload_to_adls(file_content, file_name):
     except Exception as e:
         print(f"Erro ao salvar dados no ADLS: {str(e)}")
 
+def read_track_info_json():
+    try:
+        service_client = DataLakeServiceClient(
+            account_url=f"https://{ADLS_ACCOUNT_NAME}.dfs.core.windows.net",
+            credential=ADLS_ACCOUNT_KEY
+        )
 
-def append_audio_features_to_parquet(track_ids):
+        file_system_client = service_client.get_file_system_client(file_system=DATA_LAKE_FILE_SYSTEM)
+        file_client = file_system_client.get_file_client(DATA_LAKE_OUTPUT_PATH_TRACK_IDS)
+
+        download = file_client.download_file()
+        track_info_str = download.readall().decode('utf-8')
+        track_info = json.loads(track_info_str)
+        
+        print(f"Arquivo JSON com informações de músicas carregado.")
+        return track_info
+
+    except Exception as e:
+        print(f"Erro ao ler o arquivo JSON {DATA_LAKE_OUTPUT_PATH_TRACK_IDS}: {str(e)}")
+        return []
+
+def append_audio_features_to_parquet(track_info):
     df_existing = read_existing_parquet()
 
     new_data = []
-    for track_id in track_ids:
+    for track in track_info:
+        track_id = track['track_id']
         features = get_audio_features(track_id)
         if features:
+            features['track_id'] = track['track_id']
+            features['track_name'] = track['track_name']
+            features['artist_name'] = track['artist_name']
             new_data.append(features)
 
     if new_data:
@@ -89,7 +110,7 @@ def append_audio_features_to_parquet(track_ids):
             df_final = df_new
 
         temp_file = 'temp_audio_features.parquet'
-        df_final.to_parquet(temp_file, index=False, engine='pyarrow') 
+        df_final.to_parquet(temp_file, index=False, engine='pyarrow')
 
         with open(temp_file, 'rb') as file_data:
             upload_to_adls(file_data.read(), DATA_LAKE_OUTPUT_PATH)
@@ -97,8 +118,9 @@ def append_audio_features_to_parquet(track_ids):
         print("Nenhum dado novo para adicionar.")
 
 if __name__ == "__main__":
-    track_ids = read_existing_track_ids() 
-    if track_ids:
-        append_audio_features_to_parquet(track_ids)
+    track_info = read_track_info_json()
+
+    if track_info:
+        append_audio_features_to_parquet(track_info)
     else:
         print("Nenhum ID de track encontrado.")
