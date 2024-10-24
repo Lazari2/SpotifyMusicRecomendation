@@ -6,3 +6,5 @@ pyspark
 python-dotenv
 azure-storage-file-datalake
 pyarrow
+streamlit
+pywhatkit
