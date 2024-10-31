@@ -49,6 +49,8 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+    env_file:
+      - ./.env 
 
   redis:
 
@@ -62,10 +64,14 @@ services:
       retries: 50
       start_period: 30s
     restart: always
+    env_file:
+      - ./.env 
 
   airflow-webserver:
     <<: *airflow-common
     command: webserver
+    env_file:
+      - ./.env 
     ports:
       - "8080:8080"
     healthcheck:
@@ -80,13 +86,14 @@ services:
       airflow-init:
         condition: service_completed_successfully
     volumes:
-    - ./dags:/opt/airflow/dags
-    - ./python_scripts:/opt/airflow/python_scripts
-    
+      - ./dags:/opt/airflow/dags
+      - ./python_scripts:/opt/airflow/python_scripts
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    env_file:
+      - ./.env  
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
@@ -99,13 +106,15 @@ services:
       airflow-init:
         condition: service_completed_successfully
     volumes:
-    - ./dags:/opt/airflow/dags
-    - ./python_scripts:/opt/airflow/python_scripts
+      - ./dags:/opt/airflow/dags
+      - ./python_scripts:/opt/airflow/python_scripts
     
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
+    env_file:
+      - ./.env 
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -126,6 +135,8 @@ services:
   airflow-triggerer:
     <<: *airflow-common
     command: triggerer
+    env_file:
+      - ./.env 
     healthcheck:
       test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
       interval: 30s
@@ -141,6 +152,8 @@ services:
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
+    env_file:
+      - ./.env 
     command:
       - -c
       - |
@@ -202,6 +215,8 @@ services:
 
   airflow-cli:
     <<: *airflow-common
+    env_file:
+      - ./.env 
     profiles:
       - debug
     environment:
@@ -215,6 +230,8 @@ services:
   flower:
     <<: *airflow-common
     command: celery flower
+    env_file:
+      - ./.env 
     profiles:
       - flower
     ports:

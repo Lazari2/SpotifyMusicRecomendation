@@ -99,9 +99,7 @@ def store_track_info(track_info):
 def get_random_search_query():
     queries = ["rock", "pop", "jazz", "hip hop", "classical", "blues", "edm", "metal", "indie", "funk", "disco"]
 
-#Generos extraidos do endpoint de genres da api do spotify, mas muitos nao funcionam, testar os que funcionam dpois....
-
-    # "genres": ["acoustic", "afrobeat", "alt-rock", "alternative", "ambient", "anime", "black-metal", "bluegrass", 
+# "genres": ["acoustic", "afrobeat", "alt-rock", "alternative", "ambient", "anime", "black-metal", "bluegrass", 
     #            "blues", "bossanova", "brazil", "breakbeat", "british", "cantopop", "chicago-house", "children", 
     #            "chill", "classical", "club", "comedy", "country", "dance", "dancehall", "death-metal", "deep-house", 
     #            "detroit-techno", "disco", "disney", "drum-and-bass", "dub", "dubstep", "edm", "electro", "electronic", 
@@ -122,7 +120,7 @@ if __name__ == "__main__":
 
     search_query = get_random_search_query()
     
-    offset = random.randint(0, 10000)
+    offset = random.randint(0, 100)
 
     track_info = search_tracks(search_query, limit=50, offset=offset)
 
