@@ -1,12 +1,12 @@
 from sklearn.preprocessing import StandardScaler
 from dotenv import load_dotenv
-from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import KMeans
 from azure.storage.filedatalake import DataLakeServiceClient
 import os
 from io import BytesIO
 import pandas as pd
-import joblib
+import mlflow
+import mlflow.sklearn
 
 load_dotenv()
 
@@ -19,27 +19,34 @@ service_client = DataLakeServiceClient(
     account_url=f"https://{ADLS_ACCOUNT_NAME}.dfs.core.windows.net",
     credential=ADLS_ACCOUNT_KEY
 )
-
 file_system_client = service_client.get_file_system_client(file_system=DATA_LAKE_FILE_SYSTEM)
 file_client = file_system_client.get_file_client(DATA_LAKE_OUTPUT_PATH)
 
 download = file_client.download_file()
 downloaded_bytes = download.readall()
-
 data = pd.read_parquet(BytesIO(downloaded_bytes))
 
-scaler = StandardScaler()
-data_scaled = scaler.fit_transform(data[['danceability', 'energy', 'key', 'loudness', 'mode',
-                                         'speechiness', 'acousticness', 'instrumentalness',
-                                         'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature']])
+# Configura o MLflow
+mlflow.set_tracking_uri("file:///C:/SpotifyRecomendation/MachineLearning/model")
+mlflow.set_experiment("Spotify_Music_Recomendation")
 
-kmeans = KMeans(n_clusters=10, random_state=42)
-kmeans.fit(data_scaled)
+with mlflow.start_run():
+
+    scaler = StandardScaler()
+    data_scaled = scaler.fit_transform(data[['danceability', 'energy', 'key', 'loudness', 'mode',
+                                             'speechiness', 'acousticness', 'instrumentalness',
+                                             'liveness', 'valence', 'tempo', 'duration_ms', 'time_signature']])
+    kmeans = KMeans(n_clusters=10, random_state=42)
+    kmeans.fit(data_scaled)
+
+    mlflow.log_param("n_clusters", 10)
+    mlflow.log_param("random_state", 42)
+    mlflow.log_metric("inertia", kmeans.inertia_)
+
+    mlflow.sklearn.log_model(kmeans, "kmeans_model")
+    mlflow.sklearn.log_model(scaler, "scaler")
 
 data['cluster'] = kmeans.labels_
-
-joblib.dump(kmeans, 'model/kmeans_model2.pkl')
-joblib.dump(scaler, 'model/scaler.pkl')
 
 temp_file = 'clustered_data.parquet'
 data.to_parquet(temp_file, index=False, engine='pyarrow')
@@ -47,14 +54,4 @@ data.to_parquet(temp_file, index=False, engine='pyarrow')
 with open(temp_file, 'rb') as file_data:
     file_client.upload_data(file_data.read(), overwrite=True)
 
-print("Modelo KMeans e Scaler salvos com sucesso. Dados com clusters salvos no Azure Data Lake.")
-
-# def recomendar_musicas(data, id_musica, num_recomendacoes=5):
-#     musica_base = data_scaled[id_musica].reshape(1, -1)  
-#     distancias = euclidean_distances(musica_base, data_scaled).flatten()
-#     indices_recomendadas = distancias.argsort()[1:num_recomendacoes+1]
-    
-#     return data.iloc[indices_recomendadas]
-
-# recomendacoes = recomendar_musicas(data, 0, num_recomendacoes=10)
-# print(recomendacoes)
+print("Modelo KMeans registrado no MLflow e dados com clusters salvos no Azure Data Lake.")

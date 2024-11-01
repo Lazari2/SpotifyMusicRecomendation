@@ -32,7 +32,7 @@ def load_data_from_adls():
 
 data = load_data_from_adls()
 
-with open('C:/SpotifyRecomendation/MachineLearning/model/kmeans_model.pkl', 'rb') as model_file:
+with open('C:/SpotifyRecomendation/MachineLearning/model/kmeans_model2.pkl', 'rb') as model_file:
     kmeans_model = joblib.load(model_file)
 
 with open('C:/SpotifyRecomendation/MachineLearning/model/scaler.pkl', 'rb') as scaler_file:

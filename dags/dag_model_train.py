@@ -5,22 +5,22 @@ from datetime import datetime, timedelta
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2024, 10, 20), 
+    'start_date': datetime(2024, 11, 1),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
 
 dag = DAG(
-    'Spotify_fetch_audio_features',
+    'train_kmeans_model',
     default_args=default_args,
-    description='DAG para executarfetch_audio_features.py de hora em hora',
-    schedule_interval='@hourly', 
+    description='DAG para treinar e versionar o modelo KMeans usando MLflow',
+    schedule_interval='@weekly',  
 )
 
-script_path = '/opt/airflow/python_scripts/fetch_audio_features.py'
+script_path = '/opt/airflow/MachineLearning/KmeansML.py'
 
-run_extraction_script = BashOperator(
-    task_id='run_fetch_audio_script_task',
+train_model_task = BashOperator(
+    task_id='train_model_task',
     bash_command=f'python {script_path}',
     dag=dag,
 )

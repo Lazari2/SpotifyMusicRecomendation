@@ -4,6 +4,7 @@ from azure.storage.filedatalake import DataLakeServiceClient
 from dotenv import load_dotenv
 import requests
 import json
+import time 
 
 load_dotenv()
 
@@ -19,12 +20,25 @@ def get_audio_features(track_id):
     headers = {
         "Authorization": f"Bearer {SPOTIFY_API_KEY}"
     }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        print(f"Erro ao buscar audio-features para {track_id}. Status Code: {response.status_code}")
-        return None
+    
+    max_retries = 5  
+    retries = 0
+
+    while retries < max_retries:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 5))  
+            print(f"Rate limit excedido. Aguardando {retry_after} segundos...")
+            time.sleep(retry_after)
+            retries += 1
+        else:
+            print(f"Erro ao buscar audio-features para {track_id}. Status Code: {response.status_code}")
+            return None
+
+    print(f"Máximo de tentativas excedido para {track_id}.")
+    return None
 
 def read_existing_parquet():
     try:

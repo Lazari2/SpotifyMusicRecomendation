@@ -122,3 +122,7 @@ dist/
 # Arquivos temporários
 tmp/
 temp/
+
+#mlflow
+MachineLearning/model/600602194522635106
+MachineLearning/model/.trash

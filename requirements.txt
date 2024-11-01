@@ -8,3 +8,4 @@ azure-storage-file-datalake
 pyarrow
 streamlit
 pywhatkit
+mlflow
